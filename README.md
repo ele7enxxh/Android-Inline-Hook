@@ -1,7 +1,10 @@
 # Android-Inline-Hook
 thumb16 thumb32 arm32 inlineHook in Android
 
-#Example
+# Build
+```ndk-build NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=./Android.mk NDK_APPLICATION_MK=./Application.mk```
+
+# Example
 ```C
 int (*old_puts)(char *) = NULL;
 
