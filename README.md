@@ -35,3 +35,6 @@ int main()
 	inlineUnHook(&info);
 }
 ```
+
+# Contact
+If you find any bugs, please contact me(197415663@qq.com)
