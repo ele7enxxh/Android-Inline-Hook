@@ -691,25 +691,28 @@ static uint32_t findSymbolAddr(struct soinfo *si, const char *symbol_name)
 
 static int doInlineUnHook(struct inlineHookInfo *info)
 {
-	int is_arm;
 	int length;
 	
-	if (info->target_addr %4 == 0) {
-		is_arm = 1;
+	if (info->target_addr % 4 == 0) {
 		length = 8;
 	}
 	else {
-		is_arm = 0;
 		info->target_addr -= 1;
 		length = 10;
 	}
+
+	kill(-1, SIGSTOP);
 	
 	mprotect((void *) PAGE_START(info->target_addr), PAGE_SIZE, PROT_READ | PROT_WRITE | PROT_EXEC);
 	memcpy((void *) info->target_addr, info->orig_instructions , length);
 	mprotect((void *) PAGE_START(info->target_addr), PAGE_SIZE, PROT_READ | PROT_EXEC);
+
+	cacheFlush(info->target_addr, info->target_addr + length);
 	
 	free(info->orig_instructions);
 	munmap(info->trampoline_instructions, PAGE_SIZE);
+
+	kill(-1, SIGCONT);
 	
 	DEBUG_PRINT("end inline unhooking, target_addr: 0x%x\n", info->target_addr);
 	
