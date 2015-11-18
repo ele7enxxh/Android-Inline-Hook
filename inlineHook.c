@@ -1,8 +1,9 @@
 /*
 thumb16 thumb32 arm32 inlineHook in Android
-author: secauo
-mail: 197415663@qq.com
-website: secauo.com
+author: ele7enxxh
+mail: ele7enxxh@qq.com
+website: ele7enxxh.com
+modified time: 2015-11-18
 created time: 2015-11-12
 */
 
@@ -19,8 +20,8 @@ created time: 2015-11-12
 #define PAGE_SIZE 4096
 #endif
 
-#define PAGE_START(addr)	(~(PAGE_SIZE - 1) & (addr))
-#define ALIGN_PC(pc)		(pc & 0xFFFFFFFC)
+#define PAGE_START(addr) (~(PAGE_SIZE - 1) & (addr))
+#define ALIGN_PC(pc)	(pc & 0xFFFFFFFC)
 
 // THUMB16
 #define B1_THUMB16		0	// B <label>
@@ -53,7 +54,9 @@ created time: 2015-11-12
 
 #define UNDEFINE	99
 
-static void inline cacheFlush(unsigned int begin, unsigned int end)
+struct inlineHookInfo *head_info = NULL;
+
+void inline cacheFlush(unsigned int begin, unsigned int end)
 {	
 	const int syscall = 0xf0002;
 	__asm __volatile (
@@ -594,7 +597,7 @@ static void relocateInstructionInArm(uint32_t target_addr, uint32_t *orig_instru
 	trampoline_instructions[idx++] = lr;
 }
 
-static void inlineHookInThumb(struct inlineHookInfo *info)
+static void inlineHookInThumb(struct inlineHookInfo *info, uint32_t new_addr, uint32_t **proto_addr)
 {
 	int idx;
 	
@@ -611,17 +614,17 @@ static void inlineHookInThumb(struct inlineHookInfo *info)
 
 	((uint16_t *) info->target_addr)[idx++] = 0xF8DF;
 	((uint16_t *) info->target_addr)[idx++] = 0xF000;	// LDR.W PC, [PC]
-	((uint16_t *) info->target_addr)[idx++] = (info->new_addr) & 0xFFFF;
-	((uint16_t *) info->target_addr)[idx++] = (info->new_addr) >> 16;
+	((uint16_t *) info->target_addr)[idx++] = new_addr & 0xFFFF;
+	((uint16_t *) info->target_addr)[idx++] = new_addr >> 16;
 
 	mprotect((void *) PAGE_START(info->target_addr), PAGE_SIZE, PROT_READ | PROT_EXEC);
 
 	info->trampoline_instructions = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
 	relocateInstructionInThumb(info->target_addr, (uint16_t *) info->orig_instructions, 10, (uint16_t *) info->trampoline_instructions);
-	info->trampoline_instructions += 1;
+	*proto_addr = info->trampoline_instructions + 1;
 }
 
-static int inlineHookInArm(struct inlineHookInfo *info)
+static int inlineHookInArm(struct inlineHookInfo *info, uint32_t new_addr, uint32_t **proto_addr)
 {
 	info->orig_instructions = malloc(8);
 	memcpy(info->orig_instructions, (void *) info->target_addr, 8);
@@ -629,12 +632,13 @@ static int inlineHookInArm(struct inlineHookInfo *info)
 	mprotect((void *) PAGE_START(info->target_addr), PAGE_SIZE, PROT_READ | PROT_WRITE | PROT_EXEC);
 
 	((uint32_t *) (info->target_addr))[0] = 0xe51ff004;	// LDR PC, [PC, #-4]
-	((uint32_t *) (info->target_addr))[1] = info->new_addr;
+	((uint32_t *) (info->target_addr))[1] = new_addr;
 
 	mprotect((void *) PAGE_START(info->target_addr), PAGE_SIZE, PROT_READ | PROT_EXEC);
 
 	info->trampoline_instructions = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
 	relocateInstructionInArm(info->target_addr, (uint32_t *) info->orig_instructions, 8, (uint32_t *) info->trampoline_instructions);
+	*proto_addr = info->trampoline_instructions;
 }
 
 static unsigned elfhash(const char *symbol_name)
@@ -681,15 +685,10 @@ static uint32_t findSymbolAddr(struct soinfo *si, const char *symbol_name)
 	return 0;	
 }
 
-int inlineUnHook(struct inlineHookInfo *info)
+static int doInlineUnHook(struct inlineHookInfo *info)
 {
 	int is_arm;
 	int length;
-	
-	if (!info->target_addr || !info->orig_instructions) {
-		DEBUG_PRINT("do not need to unHook in here\n");
-		return -1;
-	}
 	
 	if (info->target_addr %4 == 0) {
 		is_arm = 1;
@@ -708,54 +707,148 @@ int inlineUnHook(struct inlineHookInfo *info)
 	free(info->orig_instructions);
 	munmap(info->trampoline_instructions, PAGE_SIZE);
 	
+	DEBUG_PRINT("end inline unhooking, target_addr: 0x%x\n", info->target_addr);
+	
 	return 0;
 }
 
-int inlineHook(struct inlineHookInfo *info)
+int inlineUnHookByName(const char *function_name, const char *so_name)
 {
-	if (!info->new_addr) {
-		DEBUG_PRINT("new_addr can not be NULL\n");
+	struct inlineHookInfo *info;
+	
+	if (function_name == NULL || so_name == NULL) {
+		DEBUG_PRINT("illegal parameter\n");
 		return -1;
 	}
 	
-	if (!info->target_addr) {
-		struct soinfo *si;
-		if (!strlen(info->so_name) || !strlen(info->symbol_name)) {
-			DEBUG_PRINT("if target_addr is NULL, so_name and symbol_name can not be NULL\n");
-			return -1;
-		}
-		
-		si = (struct soinfo *) dlopen(info->so_name, RTLD_NOW);
-		if (si == NULL) {
-			DEBUG_PRINT("dlopen %s failed\n", info->so_name);
-			return -1;
-		}
-		
-		info->target_addr = findSymbolAddr(si, info->symbol_name);
-		if (!info->target_addr) {
-			DEBUG_PRINT("can not find %s in %s\n", info->symbol_name, info->so_name);
-			return -1;
-		}
-		info->target_addr += info->offset;
+	if (head_info == NULL) {
+		DEBUG_PRINT("no function is hooked\n");
+		return -1;
 	}
 	
+	DEBUG_PRINT("start inline unhooking, function_name: %s, so_name: %s\n", function_name, so_name);
+	
+	for (info = head_info; info != NULL; info = info->next)
+	{
+		if (strcmp(function_name, info->function_name) == 0 && strcmp(so_name, info->so_name) == 0) {
+			return doInlineUnHook(info);
+		}
+	}
+	
+	DEBUG_PRINT("we do not need to unhook, function_name: %s, so_name: %s\n", function_name, so_name);
+	return -1;
+}
+
+int inlineUnHookByAddr(uint32_t target_addr)
+{
+	struct inlineHookInfo *info;
+	
+	if (!target_addr) {
+		DEBUG_PRINT("illegal parameter\n");
+		return -1;
+	}
+	
+	if (head_info == NULL) {
+		DEBUG_PRINT("no function is hooked\n");
+		return -1;
+	}
+	
+	DEBUG_PRINT("start inline unhooking, target_addr: 0x%x\n", target_addr);
+	
+	for (info = head_info; info != NULL; info = info->next)
+	{
+		if (target_addr == info->target_addr) {
+			return doInlineUnHook(info);
+		}
+	}
+	
+	DEBUG_PRINT("we do not need to unhook, target_addr: 0x%x\n", target_addr);
+	return -1;
+}
+
+int doInlineHook(struct inlineHookInfo *info, uint32_t new_addr, uint32_t **proto_addr)
+{
 	kill(-1, SIGSTOP);
 
 	if (info->target_addr % 4 == 0) {
-		DEBUG_PRINT("start hooking target_addr(0x%x) with new_addr(0x%x) in arm mode\n", info->target_addr, info->new_addr);
-		inlineHookInArm(info);
+		inlineHookInArm(info, new_addr, proto_addr);
 		cacheFlush(info->target_addr, info->target_addr + 8);
 	}
 	else {
-		DEBUG_PRINT("start hooking target_addr(0x%x) with new_addr(0x%x) in thumb mode\n", info->target_addr, info->new_addr);
-		inlineHookInThumb(info);
+		inlineHookInThumb(info, new_addr, proto_addr);
 		cacheFlush(info->target_addr, info->target_addr + 10);
 		info->target_addr += 1;
 	}
 	
 	kill(-1, SIGCONT);
 	
-	DEBUG_PRINT("end hooking\n");
+	DEBUG_PRINT("end inline hooking, target_addr: 0x%x, new_addr: 0x%x, *proto_addr: 0x%x\n", info->target_addr, new_addr, (uint32_t) *proto_addr);
 	
 	return 0;
+}
+
+
+int inlineHookByName(const char *function_name, const char *so_name, uint32_t offset, uint32_t new_addr, uint32_t **proto_addr)
+{
+	struct soinfo *si;
+	struct inlineHookInfo *info;
+	
+	if (function_name == NULL || so_name == NULL || !new_addr) {
+		DEBUG_PRINT("illegal parameter\n");
+		return -1;
+	}
+	
+	DEBUG_PRINT("start inline hooking, function_name: %s, so_name: %s, offset: 0x%x\n", function_name, so_name, offset);
+	
+	if (head_info == NULL) {
+		head_info = (struct inlineHookInfo *) malloc(sizeof(struct inlineHookInfo));
+		info = head_info;
+	}
+	else {
+		head_info->next = (struct inlineHookInfo *) malloc(sizeof(struct inlineHookInfo));
+		info = head_info->next;
+	}
+	
+	strncpy(info->so_name, so_name, strlen(so_name));
+	strncpy(info->function_name, function_name, strlen(function_name));
+	
+	si = (struct soinfo *) dlopen(info->so_name, RTLD_NOW);
+	if (si == NULL) {
+		DEBUG_PRINT("dlopen %s failed\n", info->so_name);
+		return -1;
+	}
+		
+	info->target_addr = findSymbolAddr(si, info->function_name);
+	if (!info->target_addr) {
+		DEBUG_PRINT("can not find %s in %s\n", info->function_name, info->so_name);
+		return -1;
+	}
+	info->target_addr += offset;
+	
+	return doInlineHook(info, new_addr, proto_addr);
+}
+
+int inlineHookByAddr(uint32_t target_addr, uint32_t new_addr, uint32_t **proto_addr)
+{
+	struct inlineHookInfo *info;
+	
+	if (!target_addr || !new_addr) {
+		DEBUG_PRINT("illegal parameter\n");
+		return -1;
+	}
+	
+	DEBUG_PRINT("start inline hooking, target_addr: 0x%x, new_addr: 0x%x\n", target_addr, new_addr);
+
+	if (head_info == NULL) {
+		head_info = (struct inlineHookInfo *) malloc(sizeof(struct inlineHookInfo));
+		info = head_info;
+	}
+	else {
+		head_info->next = (struct inlineHookInfo *) malloc(sizeof(struct inlineHookInfo));
+		info = head_info->next;
+	}
+
+	info->target_addr = target_addr;
+	
+	return doInlineHook(info, new_addr, proto_addr);
 }
