@@ -621,10 +621,12 @@ static void inlineHookInThumb(struct inlineHookInfo *info, uint32_t new_addr, ui
 
 	info->trampoline_instructions = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
 	relocateInstructionInThumb(info->target_addr, (uint16_t *) info->orig_instructions, 10, (uint16_t *) info->trampoline_instructions);
-	*proto_addr = info->trampoline_instructions + 1;
+	if (proto_addr != NULL) {
+		*proto_addr = info->trampoline_instructions + 1;
+	}
 }
 
-static int inlineHookInArm(struct inlineHookInfo *info, uint32_t new_addr, uint32_t **proto_addr)
+static void inlineHookInArm(struct inlineHookInfo *info, uint32_t new_addr, uint32_t **proto_addr)
 {
 	info->orig_instructions = malloc(8);
 	memcpy(info->orig_instructions, (void *) info->target_addr, 8);
@@ -638,7 +640,9 @@ static int inlineHookInArm(struct inlineHookInfo *info, uint32_t new_addr, uint3
 
 	info->trampoline_instructions = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
 	relocateInstructionInArm(info->target_addr, (uint32_t *) info->orig_instructions, 8, (uint32_t *) info->trampoline_instructions);
-	*proto_addr = info->trampoline_instructions;
+	if (proto_addr != NULL) {
+		*proto_addr = info->trampoline_instructions;
+	}
 }
 
 static unsigned elfhash(const char *symbol_name)
@@ -766,7 +770,7 @@ int inlineUnHookByAddr(uint32_t target_addr)
 	return -1;
 }
 
-int doInlineHook(struct inlineHookInfo *info, uint32_t new_addr, uint32_t **proto_addr)
+static int doInlineHook(struct inlineHookInfo *info, uint32_t new_addr, uint32_t **proto_addr)
 {
 	kill(-1, SIGSTOP);
 
