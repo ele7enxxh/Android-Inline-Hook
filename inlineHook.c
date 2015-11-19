@@ -808,11 +808,11 @@ int inlineHookByName(const char *function_name, const char *so_name, uint32_t of
 	DEBUG_PRINT("start inline hooking, function_name: %s, so_name: %s, offset: 0x%x\n", function_name, so_name, offset);
 	
 	if (head_info == NULL) {
-		head_info = (struct inlineHookInfo *) malloc(sizeof(struct inlineHookInfo));
+		head_info = (struct inlineHookInfo *) calloc(1, sizeof(struct inlineHookInfo));
 		info = head_info;
 	}
 	else {
-		head_info->next = (struct inlineHookInfo *) malloc(sizeof(struct inlineHookInfo));
+		head_info->next = (struct inlineHookInfo *) calloc(1, sizeof(struct inlineHookInfo));
 		info = head_info->next;
 	}
 	
@@ -847,11 +847,11 @@ int inlineHookByAddr(uint32_t target_addr, uint32_t new_addr, uint32_t **proto_a
 	DEBUG_PRINT("start inline hooking, target_addr: 0x%x, new_addr: 0x%x\n", target_addr, new_addr);
 
 	if (head_info == NULL) {
-		head_info = (struct inlineHookInfo *) malloc(sizeof(struct inlineHookInfo));
+		head_info = (struct inlineHookInfo *) calloc(1, sizeof(struct inlineHookInfo));
 		info = head_info;
 	}
 	else {
-		head_info->next = (struct inlineHookInfo *) malloc(sizeof(struct inlineHookInfo));
+		head_info->next = (struct inlineHookInfo *) calloc(1, sizeof(struct inlineHookInfo));
 		info = head_info->next;
 	}
 
