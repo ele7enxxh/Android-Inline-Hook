@@ -3,14 +3,7 @@
 
 #include <elf.h>
 
-#ifdef ENABLE_DEBUG
-#include <android/log.h>
-#define LOG_TAG "ele7enxxh_inlineHook"
-#define LOGD(fmt, args...) __android_log_print(ANDROID_LOG_DEBUG,LOG_TAG, fmt, ##args)
-#define DEBUG_PRINT(fmt,args...) LOGD(fmt, ##args)
-#else
-#define DEBUG_PRINT(fmt,args...)
-#endif
+#include "list.h"
 
 struct soinfo {
 	char name[128];
@@ -48,17 +41,22 @@ struct soinfo {
 };
 
 struct inlineHookInfo {
+	struct list_head list;
 	char so_name[128];
 	char function_name[128];
 	uint32_t target_addr;
+	uint32_t new_addr;
+	uint32_t **proto_addr;
 	void *orig_instructions;
 	void *trampoline_instructions;
-	struct inlineHookInfo *next;
+	int status;
 };
 
-int inlineUnHookByName(const char *function_name, const char *so_name);
-int inlineUnHookByAddr(uint32_t target_addr);
-int inlineHookByName(const char *function_name, const char *so_name, uint32_t offset, uint32_t new_addr, uint32_t **proto_addr);
-int inlineHookByAddr(uint32_t target_addr, uint32_t new_addr, uint32_t **proto_addr);
+int unregisterInlineHookByName(const char *function_name, const char *so_name);
+int unregisterInlineHookByAddr(uint32_t target_addr);
+int registerInlineHookByName(const char *function_name, const char *so_name, uint32_t offset, uint32_t new_addr, uint32_t **proto_addr);
+int registerInlineHookByAddr(uint32_t target_addr, uint32_t new_addr, uint32_t **proto_addr);
+int inlineUnHook();
+int inlineHook();
 
 #endif
