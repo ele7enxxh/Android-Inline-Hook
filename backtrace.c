@@ -8,11 +8,11 @@ created time: 2015-11-30
 */
 
 #include <stdio.h>
-#include <dirent.h>
 #include <dlfcn.h>
 #include <string.h>
 #include <errno.h>
-#include <asm/signal.h>
+
+#include "backtrace.h"
 
 #define ENABLE_DEBUG
 #include "log.h"
@@ -61,62 +61,7 @@ static ssize_t backtracePtrace(pid_t tid, struct backtrace_frame *backtrace)
 	return unwind_backtrace_thread(tid, backtrace, 1, MAX_DEPATH);
 }
 
-static void contAllThreads(pid_t pid, pid_t *tids)
-{
-	pid_t tid;
-	int i;
-
-	i = 0;
-	for (tid = tids[i]; tid != 0; tid = tids[++i]) {
-		tkill(pid, tid, SIGCONT);
-	}	
-}
-
-static void stopAllThreads(pid_t pid, pid_t *tids)
-{
-	pid_t tid;
-	int i;
-
-	i = 0;
-	for (tid = tids[i]; tid != 0; tid = tids[++i]) {
-		tkill(pid, tid, SIGSTOP);
-	}
-}
-
-static int getAllTid(pid_t pid, pid_t *tids)
-{
-	char dir_path[32];
-	DIR *dir;
-	int i;
-	struct dirent *entry;
-	pid_t tid;
-
-	if (pid < 0) {
-		snprintf(dir_path, sizeof(dir_path), "/proc/self/task");
-	}
-	else {
-		snprintf(dir_path, sizeof(dir_path), "/proc/%d/task", pid);
-	}
-
-	dir = opendir(dir_path);
-    if (dir == NULL) {
-        LOGD("opendir(): %s", strerror(errno));
-        return -1;
-    }
-
-    i = 0;
-    while((entry = readdir(dir)) != NULL) {
-    	tid = atoi(entry->d_name);
-    	if (tid != 0 && tid != getpid()) {
-    		tids[i++] = tid;
-    	}
-    }
-    closedir(dir);
-    tids[i] = 0;
-    return 0;
-}
-
-static int doCheckThreadsafety(pid_t tid, int status, uint32_t *addrs, int length)
+static int doCheckThreadsafety(pid_t tid, uint32_t *addrs, int length)
 {
 	struct backtrace_frame backtrace[MAX_DEPATH];
 	ssize_t count;
@@ -140,10 +85,8 @@ static int doCheckThreadsafety(pid_t tid, int status, uint32_t *addrs, int lengt
 	return 0;
 }
 
-int checkThreadsafety(int status, uint32_t *addrs, int length)
+int checkThreadsafety(pid_t *tids, uint32_t *addrs, int length)
 {
-	pid_t pid;
-	pid_t tids[1024];
 	pid_t tid;
 	int i;
 
@@ -151,22 +94,12 @@ int checkThreadsafety(int status, uint32_t *addrs, int length)
 		return -1;
 	}
 
-	pid = getpid();
-	if (getAllTid(pid, tids) == -1) {
-		return -1;
-	}
-
-	stopAllThreads(pid, tids);
-
 	i = 0;
 	for (tid = tids[i]; tid != 0; tid = tids[++i]) {
-		if (doCheckThreadsafety(tid, status, addrs, length) == -1) {
-			contAllThreads(pid, tids);
+		if (doCheckThreadsafety(tid, addrs, length) == -1) {
 			return -1;
 		}
 	}
-
-	contAllThreads(pid, tids);
 
 	LOGD("check thread safety success");
 

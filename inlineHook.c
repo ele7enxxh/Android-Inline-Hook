@@ -14,8 +14,10 @@ created time: 2015-11-30
 #include <asm/signal.h>
 
 #include "list.h"
+#include "utils.h"
 #include "backtrace.h"
 #include "inlineHook.h"
+
 #define ENABLE_DEBUG
 #include "log.h"
 
@@ -59,9 +61,8 @@ created time: 2015-11-30
 #define MOV_ARM			23	// MOV Rd, PC
 #define LDR_ARM			24	// LDR Rt, <label>
 
-#define UNDEFINE	99
+#define UNDEFINE		99
 
-// struct inlineHookInfo *head_info = NULL;
 static struct list_head head = {&head, &head};
 
 static void inline cacheFlush(unsigned int begin, unsigned int end)
@@ -475,7 +476,7 @@ static void relocateInstructionInThumb(uint32_t target_addr, uint16_t *orig_inst
 			++i;
 		}
 		
-		if ((i + 1) >= length / sizeof(uint16_t)) {
+		if (i >= length / sizeof(uint16_t)) {
 			break;
 		}
 	}
@@ -631,7 +632,7 @@ static void inlineHookInThumb(struct inlineHookInfo *info)
 
 	if (info->proto_addr != NULL) {
 		info->trampoline_instructions = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
-		relocateInstructionInThumb(info->target_addr, (uint16_t *) info->orig_instructions, 10, (uint16_t *) info->trampoline_instructions);
+		relocateInstructionInThumb(info->target_addr, (uint16_t *) info->orig_instructions, idx * sizeof(uint16_t), (uint16_t *) info->trampoline_instructions);
 		*(info->proto_addr) = info->trampoline_instructions + 1;
 		info->target_addr += 1;
 	}
@@ -844,6 +845,7 @@ int inlineUnHook()
 	struct list_head *pos;
 	struct inlineHookInfo *info;
 	uint32_t addr[1024];
+	pid_t tids[1024];
 	struct list_head *node;
 
 	i = 0;
@@ -855,8 +857,15 @@ int inlineUnHook()
 	}
 	addr[i] = 0;
 
-	if (checkThreadsafety(UNHOOKING_STATUS, addr, 10) == -1) {
+	if (getAllTids(getpid(), tids) == -1) {
 		return -1;
+	}
+
+	stopAllThreads(getpid(), tids);
+
+	if (checkThreadsafety(tids, addr, 10) == -1) {  // try to check thread-safe, maybe it is wrong.
+		// contAllThreads(getpid(), tids);
+		// return -1;
 	}
 
 	list_for_each_safe(pos, node, &head) {
@@ -867,6 +876,10 @@ int inlineUnHook()
 			free(info);
 		}
 	}
+
+	contAllThreads(getpid(), tids);
+
+	return 0;
 }
 
 static int doInlineHook(struct inlineHookInfo *info)
@@ -891,6 +904,7 @@ int inlineHook()
 	struct list_head *pos;
 	struct inlineHookInfo *info;
 	uint32_t addr[1024];
+	pid_t tids[1024];
 
 	i = 0;
 	list_for_each(pos, &head) {
@@ -901,8 +915,15 @@ int inlineHook()
 	}
 	addr[i] = 0;
 
-	if (checkThreadsafety(HOOKING_STATUS, addr, 10) == -1) {
+	if (getAllTids(getpid(), tids) == -1) {
 		return -1;
+	}
+
+	stopAllThreads(getpid(), tids);
+
+	if (checkThreadsafety(tids, addr, 10) == -1) {  // try to check thread-safe, maybe it is wrong.
+		// contAllThreads(getpid(), tids);
+		// return -1;
 	}
 
 	list_for_each(pos, &head) {
@@ -911,6 +932,8 @@ int inlineHook()
 			doInlineHook(info);
 		}
 	}
+
+	contAllThreads(getpid(), tids);
 
 	return 0;
 }
