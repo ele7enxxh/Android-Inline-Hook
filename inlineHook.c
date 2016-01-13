@@ -594,7 +594,7 @@ static void relocateInstructionInArm(uint32_t target_addr, uint32_t *orig_instru
 	trampoline_instructions[idx++] = lr;
 }
 
-static void inlineHookInThumb(struct inlineHookInfo *info)
+void inlineHookInThumb(struct inlineHookInfo *info)
 {
 	int idx;
 	
