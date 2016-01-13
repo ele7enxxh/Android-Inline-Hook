@@ -16,6 +16,7 @@ created time: 2015-11-30
 #include "list.h"
 #include "utils.h"
 #include "backtrace.h"
+#include "asm.h"
 #include "inlineHook.h"
 
 #define ENABLE_DEBUG
@@ -64,21 +65,6 @@ created time: 2015-11-30
 #define UNDEFINE		99
 
 static struct list_head head = {&head, &head};
-
-static void inline cacheFlush(unsigned int begin, unsigned int end)
-{	
-	const int syscall = 0xf0002;
-	__asm __volatile (
-		"mov	 r0, %0\t\n"
-		"mov	 r1, %1\t\n"
-		"mov	 r7, %2\t\n"
-		"mov     r2, #0x0\t\n"
-		"svc     0x00000000\t\n"
-		:
-		:	"r" (begin), "r" (end), "r" (syscall)
-		:	"r0", "r1", "r7"
-		);
-}
 
 static int getTypeInThumb16(uint16_t instruction)
 {
@@ -631,7 +617,7 @@ static void inlineHookInThumb(struct inlineHookInfo *info)
 	mprotect((void *) PAGE_START(info->target_addr), PAGE_SIZE, PROT_READ | PROT_EXEC);
 
 	if (info->proto_addr != NULL) {
-		info->trampoline_instructions = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
+		info->trampoline_instructions = asmMmap2(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
 		relocateInstructionInThumb(info->target_addr, (uint16_t *) info->orig_instructions, idx * sizeof(uint16_t), (uint16_t *) info->trampoline_instructions);
 		*(info->proto_addr) = info->trampoline_instructions + 1;
 		info->target_addr += 1;
@@ -651,7 +637,7 @@ static void inlineHookInArm(struct inlineHookInfo *info)
 	mprotect((void *) PAGE_START(info->target_addr), PAGE_SIZE, PROT_READ | PROT_EXEC);
 
 	if (info->proto_addr != NULL) {
-		info->trampoline_instructions = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
+		info->trampoline_instructions = asmMmap2(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
 		relocateInstructionInArm(info->target_addr, (uint32_t *) info->orig_instructions, 8, (uint32_t *) info->trampoline_instructions);
 		*(info->proto_addr) = info->trampoline_instructions;
 	}
@@ -827,7 +813,7 @@ static int doInlineUnHook(struct inlineHookInfo *info)
 	memcpy((void *) info->target_addr, info->orig_instructions, length);
 	mprotect((void *) PAGE_START(info->target_addr), PAGE_SIZE, PROT_READ | PROT_EXEC);
 
-	cacheFlush(info->target_addr, info->target_addr + length);
+	asmCacheFlush(info->target_addr, info->target_addr + length);
 	
 	free(info->orig_instructions);
 	if (info->trampoline_instructions != NULL) {
@@ -886,11 +872,11 @@ static int doInlineHook(struct inlineHookInfo *info)
 {
 	if (info->target_addr % 4 == 0) {
 		inlineHookInArm(info);
-		cacheFlush(info->target_addr, info->target_addr + 8);
+		asmCacheFlush(info->target_addr, info->target_addr + 8);
 	}
 	else {
 		inlineHookInThumb(info);
-		cacheFlush(info->target_addr - 1, info->target_addr - 1 + 10);
+		asmCacheFlush(info->target_addr - 1, info->target_addr - 1 + 10);
 	}
 	
 	LOGD("end inline hooking, target_addr: 0x%x, new_addr: 0x%x, *proto_addr: 0x%x", info->target_addr, info->new_addr, (uint32_t) *(info->proto_addr));
