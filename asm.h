@@ -3,7 +3,7 @@
 
 #include <stdio.h>
 
-void inline asmCacheFlush(unsigned int begin, unsigned int end);
+int inline asmCacheFlush(unsigned int begin, unsigned int end);
 void inline *asmMmap2(void *addr, size_t length, int prot, int flags, int fd, off_t pgoffset);
 
 #endif
