@@ -19,7 +19,7 @@ LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
 LOCAL_MODULE    := hook
-LOCAL_SRC_FILES := inlineHook.c backtrace.c utils.c asm.c
+LOCAL_SRC_FILES := inlineHook.c backtrace.c utils.c asm.S
 LOCAL_LDLIBS += -L$(SYSROOT)/usr/lib -llog
 
 include $(BUILD_STATIC_LIBRARY)
