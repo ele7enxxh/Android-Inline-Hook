@@ -6,7 +6,7 @@ int (*old_puts)(const char *) = NULL;
 
 int new_puts(const char *string)
 {
-    old_puts("inlineHook success\n");
+    old_puts("inlineHook success");
 }
 
 int hook()
@@ -32,9 +32,9 @@ int unHook()
 
 int main()
 {
-    printf("test\n");
+    puts("test");
     hook();
-    printf("test\n");
+    puts("test");
     unHook();
-    printf("test\n");
+    puts("test");
 }
