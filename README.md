@@ -19,7 +19,7 @@ int new_puts(const char *string)
 
 int hook()
 {
-	if (registerInlineHook((uint32_t) puts, (uint32_t) new_puts, (uint32_t *) &old_puts) != ELE7EN_OK) {
+	if (registerInlineHook((uint32_t) puts, (uint32_t) new_puts, (uint32_t **) &old_puts) != ELE7EN_OK) {
 		return -1;
 	}
 	if (inlineHook((uint32_t) puts) != ELE7EN_OK) {
