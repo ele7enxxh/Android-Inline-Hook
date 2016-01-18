@@ -14,7 +14,7 @@ int (*old_puts)(const char *) = NULL;
 
 int new_puts(const char *string)
 {
-	old_puts("inlineHook success");
+	old_puts("inlineHook success\n");
 }
 
 int hook()
@@ -40,11 +40,11 @@ int unHook()
 
 int main()
 {
-	printf("test");
+	printf("test\n");
 	hook();
-	printf("test");
+	printf("test\n");
 	unHook();
-	printf("test");
+	printf("test\n");
 }
 
 ```
