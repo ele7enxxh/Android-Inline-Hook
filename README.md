@@ -1,5 +1,5 @@
 # Android-Inline-Hook
-thumb16 thumb32 arm32 inlineHook in Android
+thumb16 thumb32 arm32 inlineHook
 
 # Build
 ```ndk-build NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=./Android.mk NDK_APPLICATION_MK=./Application.mk```
@@ -7,54 +7,46 @@ thumb16 thumb32 arm32 inlineHook in Android
 # Example
 ```C
 #include <stdio.h>
-#include <pthread.h>
 
-int new_a()
+#include "inlineHook.h"
+
+int (*old_puts)(const char *) = NULL;
+
+int new_puts(const char *string)
 {
-	printf("new_a\n");
+	old_puts("inlineHook success\n");
 }
 
-int a()
+int hook()
 {
-	printf("a\n");
-}
-
-int thread()
-{
-	while(1) {
-		a();
+	if (registerInlineHook((uint32_t) puts, (uint32_t) new_puts, (uint32_t **) &old_puts) != ELE7EN_OK) {
+		return -1;
 	}
+	if (inlineHook((uint32_t) puts) != ELE7EN_OK) {
+		return -1;
+	}
+	
+	return 0;
 }
 
-int (*old_a)() = NULL;
+int unHook()
+{
+	if (inlineUnHook((uint32_t) puts) != ELE7EN_OK) {
+		return -1;
+	}
+	
+	return 0;
+}
 
 int main()
 {
-	int err;
-	int i;
-	pthread_t tid[10];
-
-	for (i = 0; i < 1; ++i) {
-		err = pthread_create(&tid[i], NULL, thread, NULL);
-		if (err) {
-			return -1;
-		}
-	}
-
-	sleep(1);
-	
-	registerInlineHookByAddr(a, new_a, &old_a);
-	while(inlineHook() < 0);
-	sleep(5);
-	unregisterInlineHookByAddr(a);
-	while(inlineUnHook() < 0);
-
-	for (i = 0; i < 1; ++i) {
-		pthread_join(tid[i], NULL);
-	}
-
-	return 0;
+	printf("test\n");
+	hook();
+	printf("test\n");
+	unHook();
+	printf("test\n");
 }
+
 ```
 
 # Contact
