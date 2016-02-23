@@ -370,6 +370,8 @@ static void doInlineHook(struct inlineHookItem *item)
 	}
 
 	item->status = HOOKED;
+	
+	cacheflush(CLEAR_BIT0(item->target_addr), CLEAR_BIT0(item->target_addr) + item->length, 0);
 }
 
 enum ele7en_status inlineHook(uint32_t target_addr)
