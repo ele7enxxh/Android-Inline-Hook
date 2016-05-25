@@ -3,7 +3,7 @@ relocate instruction
 author: ele7enxxh
 mail: ele7enxxh@qq.com
 website: ele7enxxh.com
-modified time: 2015-01-23
+modified time: 2016-05-25
 created time: 2015-01-17
 */
 
@@ -429,6 +429,9 @@ static void relocateInstructionInThumb(uint32_t target_addr, uint16_t *orig_inst
 		++(*count);
 		
 		if ((orig_instructions[orig_pos] >> 11) >= 0x1D && (orig_instructions[orig_pos] >> 11) <= 0x1F) {
+			if (orig_pos + 2 > length / sizeof(uint16_t)) {
+				break;
+			}
 			offset = relocateInstructionInThumb32(pc, orig_instructions[orig_pos], orig_instructions[orig_pos + 1], &trampoline_instructions[trampoline_pos]);
 			pc += sizeof(uint32_t);
 			trampoline_pos += offset;
