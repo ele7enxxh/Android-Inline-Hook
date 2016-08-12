@@ -336,6 +336,7 @@ void inlineUnHookAll()
 	for (i = 0; i < info.size; ++i) {
 		if (info.item[i].status == HOOKED) {
 			doInlineUnHook(&info.item[i], i);
+			--i;
 		}
 	}
 
