@@ -162,7 +162,7 @@ static pid_t freeze(struct inlineHookItem *item, int action)
 				}
 			}
 			
-			raise(SIGSTOP);	
+			raise(SIGSTOP);
 
 			for (i = 0; i < count; ++i) {
 				ptrace(PTRACE_DETACH, tids[i], NULL, NULL);
@@ -186,11 +186,7 @@ static void unFreeze(pid_t pid)
 	}
 
 	kill(pid, SIGCONT);
-	while (1) {
-		if (wait(NULL) < 0) {
-			break;
-		}
-	}
+	wait(NULL);
 }
 
 static bool isExecutableAddr(uint32_t addr)
