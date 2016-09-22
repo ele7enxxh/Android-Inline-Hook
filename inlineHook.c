@@ -290,9 +290,9 @@ enum ele7en_status registerInlineHook(uint32_t target_addr, uint32_t new_addr, u
 
 static void doInlineUnHook(struct inlineHookItem *item, int pos)
 {
-	mprotect((void *) PAGE_START(CLEAR_BIT0(item->target_addr)), PAGE_SIZE, PROT_READ | PROT_WRITE | PROT_EXEC);
+	mprotect((void *) PAGE_START(CLEAR_BIT0(item->target_addr)), PAGE_SIZE * 2, PROT_READ | PROT_WRITE | PROT_EXEC);
 	memcpy((void *) CLEAR_BIT0(item->target_addr), item->orig_instructions, item->length);
-	mprotect((void *) PAGE_START(CLEAR_BIT0(item->target_addr)), PAGE_SIZE, PROT_READ | PROT_EXEC);
+	mprotect((void *) PAGE_START(CLEAR_BIT0(item->target_addr)), PAGE_SIZE * 2, PROT_READ | PROT_EXEC);
 	munmap(item->trampoline_instructions, PAGE_SIZE);
 	free(item->orig_instructions);
 
@@ -341,7 +341,7 @@ void inlineUnHookAll()
 
 static void doInlineHook(struct inlineHookItem *item)
 {
-	mprotect((void *) PAGE_START(CLEAR_BIT0(item->target_addr)), PAGE_SIZE, PROT_READ | PROT_WRITE | PROT_EXEC);
+	mprotect((void *) PAGE_START(CLEAR_BIT0(item->target_addr)), PAGE_SIZE * 2, PROT_READ | PROT_WRITE | PROT_EXEC);
 
 	if (TEST_BIT0(item->target_addr)) {
 		int i;
@@ -360,7 +360,7 @@ static void doInlineHook(struct inlineHookItem *item)
 		((uint32_t *) (item->target_addr))[1] = item->new_addr;
 	}
 
-	mprotect((void *) PAGE_START(CLEAR_BIT0(item->target_addr)), PAGE_SIZE, PROT_READ | PROT_EXEC);
+	mprotect((void *) PAGE_START(CLEAR_BIT0(item->target_addr)), PAGE_SIZE * 2, PROT_READ | PROT_EXEC);
 
 	if (item->proto_addr != NULL) {
 		*(item->proto_addr) = TEST_BIT0(item->target_addr) ? (uint32_t *) SET_BIT0((uint32_t) item->trampoline_instructions) : item->trampoline_instructions;
