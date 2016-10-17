@@ -3,7 +3,7 @@ relocate instruction
 author: ele7enxxh
 mail: ele7enxxh@qq.com
 website: ele7enxxh.com
-modified time: 2016-05-25
+modified time: 2016-10-17
 created time: 2015-01-17
 */
 
@@ -26,6 +26,10 @@ enum INSTRUCTION_TYPE {
 	ADR_THUMB16,
 	// LDR Rt, <label>
 	LDR_THUMB16,
+
+	// CB{N}Z <Rn>, <label>
+	CB_THUMB16,
+
 
 	// BLX <label>
 	BLX_THUMB32,
@@ -90,6 +94,9 @@ static int getTypeInThumb16(uint16_t instruction)
 	}
 	if ((instruction & 0xF800) == 0x4800) {
 		return LDR_THUMB16;
+	}
+	if ((instruction & 0xF500) == 0xB100) {
+		return CB_THUMB16;
 	}
 	return UNDEFINE;
 }
@@ -241,6 +248,23 @@ static int relocateInstructionInThumb16(uint32_t pc, uint16_t instruction, uint1
 		trampoline_instructions[2] = value & 0xFFFF;
 		trampoline_instructions[3] = value >> 16;
 		offset = 4;
+	}
+	else if (type == CB_THUMB16) {
+		int nonzero;
+		uint32_t imm32;
+		uint32_t value;
+
+		nonzero = (instruction & 0x800) >> 11;
+		imm32 = ((instruction & 0x200) >> 3) | ((instruction & 0xF8) >> 2);
+		value = pc + imm32 + 1;
+
+		trampoline_instructions[0] = instruction & 0xFD07;
+		trampoline_instructions[1] = 0xE003;	// B PC, #6
+		trampoline_instructions[2] = 0xF8DF;
+		trampoline_instructions[3] = 0xF000;	// LDR.W PC, [PC]
+		trampoline_instructions[4] = value & 0xFFFF;
+		trampoline_instructions[5] = value >> 16;
+		offset = 6;
 	}
 	else {
 		trampoline_instructions[0] = instruction;
