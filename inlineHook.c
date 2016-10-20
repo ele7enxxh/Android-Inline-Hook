@@ -168,7 +168,7 @@ static pid_t freeze(struct inlineHookItem *item, int action)
 				ptrace(PTRACE_DETACH, tids[i], NULL, NULL);
 			}
 
-			exit(0);
+			raise(SIGKILL);
 		}
 
 		else if (pid > 0) {
