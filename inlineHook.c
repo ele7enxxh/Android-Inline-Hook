@@ -343,6 +343,10 @@ static void doInlineHook(struct inlineHookItem *item)
 {
 	mprotect((void *) PAGE_START(CLEAR_BIT0(item->target_addr)), PAGE_SIZE * 2, PROT_READ | PROT_WRITE | PROT_EXEC);
 
+	if (item->proto_addr != NULL) {
+		*(item->proto_addr) = TEST_BIT0(item->target_addr) ? (uint32_t *) SET_BIT0((uint32_t) item->trampoline_instructions) : item->trampoline_instructions;
+	}
+	
 	if (TEST_BIT0(item->target_addr)) {
 		int i;
 
@@ -361,10 +365,6 @@ static void doInlineHook(struct inlineHookItem *item)
 	}
 
 	mprotect((void *) PAGE_START(CLEAR_BIT0(item->target_addr)), PAGE_SIZE * 2, PROT_READ | PROT_EXEC);
-
-	if (item->proto_addr != NULL) {
-		*(item->proto_addr) = TEST_BIT0(item->target_addr) ? (uint32_t *) SET_BIT0((uint32_t) item->trampoline_instructions) : item->trampoline_instructions;
-	}
 
 	item->status = HOOKED;
 	
