@@ -3,6 +3,10 @@
 
 #include <stdio.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 enum ele7en_status {
 	ELE7EN_ERROR_UNKNOWN = -1,
 	ELE7EN_OK = 0,
@@ -22,4 +26,8 @@ void inlineUnHookAll();
 enum ele7en_status inlineHook(uint32_t target_addr);
 void inlineHookAll();
 
+#ifdef __cplusplus
+｝
+#endif
+	
 #endif
