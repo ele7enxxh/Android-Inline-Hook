@@ -202,7 +202,7 @@ static bool isExecutableAddr(uint32_t addr)
 	}
 
 	while (fgets(line, sizeof(line), fp)) {
-		if (strstr(line, "r-xp")) {
+		if (strstr(line, "r-xp") || strstr(line, "rwxp")) {
 			start = strtoul(strtok(line, "-"), NULL, 16);
 			end = strtoul(strtok(NULL, " "), NULL, 16);
 			if (addr >= start && addr <= end) {
