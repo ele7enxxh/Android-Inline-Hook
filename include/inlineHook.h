@@ -27,7 +27,7 @@ enum ele7en_status inlineHook(uint32_t target_addr);
 void inlineHookAll();
 
 #ifdef __cplusplus
-｝
+}
 #endif
 	
 #endif
