@@ -376,12 +376,16 @@ static int relocateInstructionInThumb32(uint32_t pc, uint16_t high_instruction, 
 			
 			value = addr[0];
 		}
-		
-		trampoline_instructions[0] = 0x4800 | (r << 8);	// LDR Rr, [PC]
-		trampoline_instructions[1] = 0xE001;	// B PC, #2
-		trampoline_instructions[2] = value & 0xFFFF;
-		trampoline_instructions[3] = value >> 16;
-		offset = 4;
+
+		// LDR.W Rr, [PC, 2]
+		trampoline_instructions[0] = 0xF8DF;
+		trampoline_instructions[1] = r << 12 | 4;
+
+		trampoline_instructions[2] = 0xBF00;     // nop
+		trampoline_instructions[3] = 0xE001;	// B PC, #2
+		trampoline_instructions[4] = value & 0xFFFF;
+		trampoline_instructions[5] = value >> 16;
+		offset = 6;
 	}
 
 	else if (type == TBB_THUMB32 || type == TBH_THUMB32) {
