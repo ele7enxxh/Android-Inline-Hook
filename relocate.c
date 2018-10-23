@@ -196,7 +196,7 @@ static int relocateInstructionInThumb16(uint32_t pc, uint16_t instruction, uint1
 		else if (type == BX_THUMB16) {
 			value = pc;
 		}
-		
+		value |= 1; // thumb		
 		trampoline_instructions[idx++] = 0xF8DF;
 		trampoline_instructions[idx++] = 0xF000;	// LDR.W PC, [PC]
 		trampoline_instructions[idx++] = value & 0xFFFF;
