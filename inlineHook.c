@@ -58,7 +58,7 @@ struct inlineHookInfo {
 
 static struct inlineHookInfo info = {0};
 
-static int getAllTids(pid_t pid, pid_t *tids)
+static int getAllTids(pid_t exclude_tid, pid_t *tids)
 {
 	char dir_path[32];
 	DIR *dir;
@@ -81,7 +81,7 @@ static int getAllTids(pid_t pid, pid_t *tids)
     i = 0;
     while((entry = readdir(dir)) != NULL) {
     	tid = atoi(entry->d_name);
-    	if (tid != 0 && tid != getpid()) {
+    	if (tid != 0 && tid != exclude_tid) {
     		tids[i++] = tid;
     	}
     }
@@ -148,7 +148,7 @@ static pid_t freeze(struct inlineHookItem *item, int action)
 	pid_t pid;
 
 	pid = -1;
-	count = getAllTids(getpid(), tids);
+	count = getAllTids(gettid(), tids);
 	if (count > 0) {
 		pid = fork();
 
