@@ -66,11 +66,11 @@ static int getAllTids(pid_t exclude_tid, pid_t *tids)
 	struct dirent *entry;
 	pid_t tid;
 
-	if (pid < 0) {
+	if (exclude_tid < 0) {
 		snprintf(dir_path, sizeof(dir_path), "/proc/self/task");
 	}
 	else {
-		snprintf(dir_path, sizeof(dir_path), "/proc/%d/task", pid);
+		snprintf(dir_path, sizeof(dir_path), "/proc/%d/task", exclude_tid);
 	}
 
 	dir = opendir(dir_path);
