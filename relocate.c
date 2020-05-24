@@ -314,22 +314,22 @@ static int relocateInstructionInThumb32(uint32_t pc, uint16_t high_instruction, 
 		if (type == BLX_THUMB32) {
 			x = (s << 24) | (i1 << 23) | (i2 << 22) | ((high_instruction & 0x3FF) << 12) | ((low_instruction & 0x7FE) << 1);
 			imm32 = s ? (x | (0xFFFFFFFF << 25)) : x;
-			value = pc + imm32;
+			value = ALIGN_PC(pc) + imm32;
 		}
 		else if (type == BL_THUMB32) {
 			x = (s << 24) | (i1 << 23) | (i2 << 22) | ((high_instruction & 0x3FF) << 12) | ((low_instruction & 0x7FF) << 1);
 			imm32 = s ? (x | (0xFFFFFFFF << 25)) : x;
-			value = pc + imm32 + 1;
+			value = ALIGN_PC(pc) + imm32 + 1;
 		}
 		else if (type == B1_THUMB32) {
 			x = (s << 20) | (j2 << 19) | (j1 << 18) | ((high_instruction & 0x3F) << 12) | ((low_instruction & 0x7FF) << 1);
 			imm32 = s ? (x | (0xFFFFFFFF << 21)) : x;
-			value = pc + imm32 + 1;
+			value = ALIGN_PC(pc) + imm32 + 1;
 		}
 		else if (type == B2_THUMB32) {
 			x = (s << 24) | (i1 << 23) | (i2 << 22) | ((high_instruction & 0x3FF) << 12) | ((low_instruction & 0x7FF) << 1);
 			imm32 = s ? (x | (0xFFFFFFFF << 25)) : x;
-			value = pc + imm32 + 1;
+			value = ALIGN_PC(pc) + imm32 + 1;
 		}
 		trampoline_instructions[idx++] = value & 0xFFFF;
 		trampoline_instructions[idx++] = value >> 16;
