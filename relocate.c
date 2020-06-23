@@ -103,6 +103,11 @@ static int getTypeInThumb16(uint16_t instruction)
 
 static int getTypeInThumb32(uint32_t instruction)
 {
+	if ((instruction & 0xFFF0D000) == 0xF3B08000){
+		// `special control operations`(eg: `DMB.W ISH`)
+		// must be placed before `if ((instruction & 0xF800D000) == 0xF0008000)`
+		return UNDEFINE;
+	}
 	if ((instruction & 0xF800D000) == 0xF000C000) {
 		return BLX_THUMB32;
 	}
