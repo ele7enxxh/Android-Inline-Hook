@@ -50,4 +50,4 @@ int main()
 ```
 
 # Contact
-If you find any bugs, please contact me(ele7enxxh@qq.com)
+If you find any bugs, please contact me(ele7enxxh@gmail.com)
